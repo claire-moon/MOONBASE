@@ -60,7 +60,7 @@ def raytrace(player_pos, player_dir, game_map, max_depth):
                 break
     return rays
 
-def draw_3d_viewport(stdscr, viewport_win, player_pos, player_dir, game_map):
+def draw_3d_viewport(viewport_win, player_pos, player_dir, game_map):
     viewport_win.clear()
     height, width = viewport_win.getmaxyx()
     
@@ -72,9 +72,10 @@ def draw_3d_viewport(stdscr, viewport_win, player_pos, player_dir, game_map):
         shade_index = min(depth, len(SHADES) - 1)
         shade = SHADES[shade_index]
         for y in range(height // 2 - column_height // 2, height // 2 + column_height // 2):
-            if 0 <= y < height:
+            if 0 <= y < height and 0 <= i < width:
                 viewport_win.addch(y, i, shade if char == WALL else char)
     
+    viewport_win.border()
     viewport_win.refresh()
 
 def draw_action_log(stdscr, log_win, action_log):
@@ -89,9 +90,14 @@ def main(stdscr):
 
     # Define the layout
     height, width = stdscr.getmaxyx()
-    viewport_win = curses.newwin(height - 3, width * 3 // 4, 0, 0)
-    map_win = curses.newwin(height // 2, width // 4, height // 2, width * 3 // 4)
-    actions_win = curses.newwin(height // 2, width // 4, 0, width * 3 // 4)
+    viewport_height = int(height * 3 // 4)
+    viewport_width = int(viewport_height * 4 // 3)
+    viewport_y = (height - viewport_height) // 2
+    viewport_x = (width - viewport_width) // 2
+
+    viewport_win = curses.newwin(viewport_height, viewport_width, viewport_y, viewport_x)
+    map_win = curses.newwin(height // 4, width // 4, height * 3 // 4, width * 3 // 4)
+    actions_win = curses.newwin(height // 4, width // 4, 0, width * 3 // 4)
     log_win = curses.newwin(3, width, height - 3, 0)
 
     # Example game data
@@ -113,7 +119,7 @@ def main(stdscr):
     while True:
         draw_2d_map(stdscr, map_win, game_map, player_pos, player_dir)
         draw_actions(stdscr, actions_win, actions)
-        draw_3d_viewport(stdscr, viewport_win, player_pos, player_dir, game_map)
+        draw_3d_viewport(viewport_win, player_pos, player_dir, game_map)
         draw_action_log(stdscr, log_win, action_log)
 
         key = stdscr.getch()
