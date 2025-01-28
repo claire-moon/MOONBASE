@@ -1,16 +1,16 @@
 import curses
 import math
 
-# Define tile types
+# TILE TYPES
 FLOOR = '.'
 WALL = '#'
 ITEM = 'I'
 ENEMY = 'E'
 PLAYER_ICONS = {
-    (0, 1): '>',  # Facing right
-    (0, -1): '<',  # Facing left
-    (1, 0): 'v',  # Facing down
-    (-1, 0): '^'  # Facing up
+    (0, 1): '>', 
+    (0, -1): '<', 
+    (1, 0): 'v', 
+    (-1, 0): '^' 
 }
 
 SHADES = " .:-=+*#%@"
@@ -20,7 +20,7 @@ def draw_2d_map(map_win, game_map, player_pos, player_dir):
     for y, row in enumerate(game_map):
         for x, char in enumerate(row):
             map_win.addch(y, x, char)
-    # Draw the player on the 2D map
+    # draw the player on the 2D map
     player_y, player_x = player_pos
     player_icon = PLAYER_ICONS[tuple(player_dir)]
     map_win.addch(player_y, player_x, player_icon)
@@ -33,20 +33,25 @@ def draw_actions(actions_win, actions):
     actions_win.refresh()
 
 def raytrace(player_pos, player_dir, game_map, max_depth, fov=60):
+
     rays = []
     player_y, player_x = player_pos
 
-    # Field of view calculations
-    num_rays = 120  # Number of rays to cast
+    # field of view calculations (IDK WHAT THIS IS)
+    num_rays = 120 
     angle_step = fov / num_rays
     start_angle = -fov / 2
 
     for i in range(num_rays):
         ray_angle = math.radians(start_angle + i * angle_step)
         ray_dir = (
-            player_dir[0] * math.cos(ray_angle) - player_dir[1] * math.sin(ray_angle),
-            player_dir[0] * math.sin(ray_angle) + player_dir[1] * math.cos(ray_angle),
+            math.cos(ray_angle) * player_dir[0] - math.sin(ray_angle) * player_dir[1],
+            math.sin(ray_angle) * player_dir[0] + math.cos(ray_angle) * player_dir[1],
         )
+        ray_dir_length = math.sqrt(ray_dir[0]**2 + ray_dir[1]**2)
+        ray_dir = (ray_dir[0] / ray_dir_length, ray_dir[1] / ray_dir_length)
+
+        # what the fuck is this
         for depth in range(1, max_depth + 1):
             y = player_y + depth * ray_dir[0]
             x = player_x + depth * ray_dir[1]
@@ -60,9 +65,12 @@ def raytrace(player_pos, player_dir, game_map, max_depth, fov=60):
                 break
         else:
             rays.append((max_depth, FLOOR))
+
     return rays
 
+
 def draw_3d_viewport(viewport_win, player_pos, player_dir, game_map, wall_color, floor_color):
+
     viewport_win.clear()
     height, width = viewport_win.getmaxyx()
 
@@ -70,25 +78,37 @@ def draw_3d_viewport(viewport_win, player_pos, player_dir, game_map, wall_color,
     rays = raytrace(player_pos, player_dir, game_map, max_depth)
 
     for i, (depth, char) in enumerate(rays):
-        # Calculate the column height based on depth
-        column_height = max(1, int(height / (depth + 1)))  # Scale column height inversely with depth
-        shade_index = min(depth, len(SHADES) - 1)
-        shade = SHADES[shade_index]
+        depth = max(depth, 0.1)  # Prevent division by zero
 
-        # Calculate the vertical start and end points for the column
-        start_y = max(0, (height // 2) - (column_height // 2))
-        end_y = min(height, (height // 2) + (column_height // 2))
+        # wall height calculations
+        perspective_height = height / (depth * math.cos(math.radians(30)))
+        column_height = round(perspective_height)
+        column_height = max(1, min(height, column_height))  # Clamp column height
 
-        column_x = i * width // len(rays)  # Scale column width across viewport
+        # vertical bounds of column
+        center_y = height // 2
+        start_y = center_y - (column_height // 2)
+        end_y = center_y + (column_height // 2)
 
-        # Draw the column within its boundaries
-        for y in range(start_y, end_y):
-            if 0 <= y < height and 0 <= column_x < width:
-                if char == WALL:
-                    viewport_win.addch(y, column_x, shade, curses.color_pair(wall_color))
-                else:
-                    viewport_win.addch(y, column_x, shade, curses.color_pair(floor_color))
+        # SUPPOSEDLY keeps the x and y within the bounds of the window
+        start_y = max(0, start_y)
+        end_y = min(height - 1, end_y)
 
+        # maps the ray to the viewport
+        column_x = int(i * width / len(rays))
+
+        # debug output
+        print(f"Ray {i}: depth={depth:.2f}, column_x={column_x}, column_height={column_height}, start_y={start_y}, end_y={end_y}")
+
+        if 0 <= column_x < width:  # Ensure column_x is valid
+            for y in range(start_y, end_y + 1):
+                try:
+                    if char == WALL:
+                        viewport_win.addch(y, column_x, SHADES[min(int(depth), len(SHADES) - 1)], curses.color_pair(wall_color))
+                    else:
+                        viewport_win.addch(y, column_x, SHADES[min(int(depth), len(SHADES) - 1)], curses.color_pair(floor_color))
+                except curses.error as e:
+                    print(f"Error drawing ray {i} at ({y}, {column_x}): {e}")
     viewport_win.border()
     viewport_win.refresh()
 
@@ -124,6 +144,9 @@ def main(stdscr):
         "#.#..#........#",
         "#.#..#........#",
         "#.####........#",
+        "#.............#",
+        "##########....#",
+        "##########....#",
         "#.............#",
         "###############"
     ]
