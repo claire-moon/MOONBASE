@@ -98,7 +98,7 @@ def draw_3d_viewport(viewport_win, player_pos, player_dir, game_map, wall_color,
         column_x = int(i * width / len(rays))
 
         # debug output
-        print(f"Ray {i}: depth={depth:.2f}, column_x={column_x}, column_height={column_height}, start_y={start_y}, end_y={end_y}")
+        #print(f"Ray {i}: depth={depth:.2f}, column_x={column_x}, column_height={column_height}, start_y={start_y}, end_y={end_y}")
 
         if 0 <= column_x < width:  # Ensure column_x is valid
             for y in range(start_y, end_y + 1):
