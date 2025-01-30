@@ -7,7 +7,7 @@ import os
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Define the paths to the map and config files
-MAP_FILE = os.path.join(SCRIPT_DIR, "MAP01.map")
+MAP_FILE = os.path.join(SCRIPT_DIR, "MAP01.txt")  # Updated to MAP01.txt
 GAMEDATA_FILE = os.path.join(SCRIPT_DIR, "GAMEDATA.ini")
 
 # Debug: Print the file paths
@@ -40,6 +40,8 @@ FLOOR_COLOR = 2
 TITLE_COLOR = 3  # Blood red for the title
 LOG_PLAYER_COLOR = 4  # Blue for "You"
 LOG_DIRECTION_COLOR = 5  # Yellow for directions
+CEILING_COLOR = 7  # Gray for ceiling
+FLOOR_COLOR_3D = 8  # Gray for floor
 
 # ASCII title
 ASCII_TITLE = [
@@ -192,6 +194,21 @@ def draw_3d_viewport(viewport_win, player_pos, player_dir, camera_plane, game_ma
     height, width = viewport_win.getmaxyx()
     viewport_win.clear()
     
+    # Fill the ceiling and floor
+    for y in range(1, height // 2):  # Ceiling
+        for x in range(1, width - 1):
+            try:
+                viewport_win.addch(y, x, ' ', curses.color_pair(CEILING_COLOR))
+            except curses.error:
+                pass  # Skip invalid positions
+    
+    for y in range(height // 2, height - 1):  # Floor
+        for x in range(1, width - 1):
+            try:
+                viewport_win.addch(y, x, ' ', curses.color_pair(FLOOR_COLOR_3D))
+            except curses.error:
+                pass  # Skip invalid positions
+    
     for x in range(1, width - 1):  # Account for border
         # Calculate ray position and direction
         camera_x = 2 * (x / (width - 2)) - 1  # [-1, 1]
@@ -319,13 +336,18 @@ def main(stdscr):
     curses.start_color()
     curses.use_default_colors()  # Use default terminal colors for better compatibility
     
-    # Define color pairs
+    # Load game data
+    gamedata = load_gamedata()
+    
+    # Define color pairs based on GAMEDATA.ini
     curses.init_pair(WALL_COLOR, curses.COLOR_BLACK, curses.COLOR_YELLOW)  # Wall color
     curses.init_pair(FLOOR_COLOR, curses.COLOR_BLACK, curses.COLOR_WHITE)  # Floor color
     curses.init_pair(TITLE_COLOR, curses.COLOR_RED, curses.COLOR_BLACK)    # Blood red title
     curses.init_pair(LOG_PLAYER_COLOR, curses.COLOR_BLUE, curses.COLOR_BLACK)  # Blue for "You"
     curses.init_pair(LOG_DIRECTION_COLOR, curses.COLOR_YELLOW, curses.COLOR_BLACK)  # Yellow for directions
     curses.init_pair(6, curses.COLOR_WHITE, curses.COLOR_BLACK)  # White for "moved" or "turned"
+    curses.init_pair(CEILING_COLOR, curses.COLOR_BLACK, curses.COLOR_WHITE)  # Ceiling color (gray)
+    curses.init_pair(FLOOR_COLOR_3D, curses.COLOR_BLACK, curses.COLOR_WHITE)  # Floor color (gray)
     
     # Load the first map
     map_index = 1
