@@ -1,5 +1,18 @@
 import curses
 import math
+import configparser
+import os
+
+# Define the directory where the script is located
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Define the paths to the map and config files
+MAP_FILE = os.path.join(SCRIPT_DIR, "MAP01.map")
+GAMEDATA_FILE = os.path.join(SCRIPT_DIR, "GAMEDATA.ini")
+
+# Debug: Print the file paths
+print("Map file path:", MAP_FILE)
+print("GAMEDATA file path:", GAMEDATA_FILE)
 
 # Tile definitions
 FLOOR = '.'
@@ -25,6 +38,8 @@ CAMERA_LENGTH = math.tan(math.radians(FOV / 2))
 WALL_COLOR = 1
 FLOOR_COLOR = 2
 TITLE_COLOR = 3  # Blood red for the title
+LOG_PLAYER_COLOR = 4  # Blue for "You"
+LOG_DIRECTION_COLOR = 5  # Yellow for directions
 
 # ASCII title
 ASCII_TITLE = [
@@ -40,7 +55,84 @@ ASCII_TITLE = [
     "           ░                                               ░      "
 ]
 
-def draw_2d_map(map_win, game_map, player_pos, player_dir, camera_y, camera_x):
+def load_next_map(map_index):
+    """
+    Load the next map in sequence.
+    - map_index: The index of the map to load (e.g., 1 for MAP01.txt).
+    Returns: A dictionary containing the map data.
+    """
+    map_file = os.path.join(SCRIPT_DIR, f"MAP{map_index:02d}.txt")
+    return load_map(map_file)
+
+def load_map(map_file):
+    """
+    Load a map from a .txt file.
+    - map_file: The path to the .txt file.
+    Returns: A dictionary containing the map data.
+    """
+    try:
+        with open(map_file, "r") as file:
+            layout = [line.strip() for line in file if line.strip()]
+    except FileNotFoundError:
+        print(f"Warning: Map file '{map_file}' not found. Using default map.")
+        layout = [
+            "###############",
+            "#.............#",
+            "#.####........#",
+            "#.#..#........#",
+            "#.#..#........#",
+            "#.####........#",
+            "#.............#",
+            "##########....#",
+            "#........#....#",
+            "#........#....#",
+            "#........#....#",
+            "#........#....#",
+            "#........#....#",
+            "#.............#",
+            "#.............#",
+            "#........#....#",
+            "#........#....#",
+            "#........#....#",
+            "#........#....#",
+            "##########....#",
+            "#.............#",
+            "#.............#",
+            "#.............#",
+            "#.............#",
+            "###############"
+        ]
+    
+    # Debug: Print the loaded layout
+    print("Loaded layout:")
+    for line in layout:
+        print(line)
+    
+    map_data = {
+        "layout": layout,
+        "wall_color": "YELLOW",  # Default wall color
+        "floor_color": "GRAY",   # Default floor color
+    }
+    return map_data
+
+def load_gamedata():
+    """
+    Load game data from GAMEDATA.ini.
+    Returns: A dictionary containing the game data.
+    """
+    config = configparser.ConfigParser()
+    config.read(GAMEDATA_FILE)
+    
+    gamedata = {
+        "player_color": config.get("COLORS", "player_color", fallback="BLUE"),
+        "direction_color": config.get("COLORS", "direction_color", fallback="YELLOW"),
+        "wall_color": config.get("COLORS", "wall_color", fallback="YELLOW"),
+        "floor_color": config.get("COLORS", "floor_color", fallback="GRAY"),
+        "max_log_entries": config.getint("LOG", "max_log_entries", fallback=10),
+    }
+    return gamedata
+
+def draw_2d_map(map_win, game_map, player_pos, player_dir, camera_y, camera_x, wall_color, floor_color):
     """
     Draw the 2D map and the player.
     - map_win: The window where the map is drawn.
@@ -49,6 +141,8 @@ def draw_2d_map(map_win, game_map, player_pos, player_dir, camera_y, camera_x):
     - player_dir: The player's direction vector.
     - camera_y: The camera's y offset.
     - camera_x: The camera's x offset.
+    - wall_color: The color pair for walls.
+    - floor_color: The color pair for the floor.
     """
     map_win.clear()
     map_height, map_width = map_win.getmaxyx()
@@ -63,7 +157,11 @@ def draw_2d_map(map_win, game_map, player_pos, player_dir, camera_y, camera_x):
     for y in range(start_y, end_y):
         for x in range(start_x, end_x):
             try:
-                map_win.addch(y - start_y, x - start_x, game_map[y][x])
+                char = game_map[y][x]
+                if char == WALL:
+                    map_win.addch(y - start_y, x - start_x, char, curses.color_pair(wall_color))
+                elif char == FLOOR:
+                    map_win.addch(y - start_y, x - start_x, char, curses.color_pair(floor_color))
             except curses.error:
                 pass  # Skip invalid positions
     
@@ -80,7 +178,7 @@ def draw_2d_map(map_win, game_map, player_pos, player_dir, camera_y, camera_x):
     map_win.border()
     map_win.refresh()
 
-def draw_3d_viewport(viewport_win, player_pos, player_dir, camera_plane, game_map):
+def draw_3d_viewport(viewport_win, player_pos, player_dir, camera_plane, game_map, wall_color, floor_color):
     """
     Draw the 3D viewport using ray casting.
     - viewport_win: The window where the 3D view is drawn.
@@ -88,6 +186,8 @@ def draw_3d_viewport(viewport_win, player_pos, player_dir, camera_plane, game_ma
     - player_dir: The player's direction vector.
     - camera_plane: The camera plane vector.
     - game_map: The 2D array representing the map.
+    - wall_color: The color pair for walls.
+    - floor_color: The color pair for the floor.
     """
     height, width = viewport_win.getmaxyx()
     viewport_win.clear()
@@ -152,28 +252,40 @@ def draw_3d_viewport(viewport_win, player_pos, player_dir, camera_plane, game_ma
                 if 0 <= y < height-1 and 0 <= x < width-1:
                     try:
                         if game_map[map_y][map_x] == WALL:
-                            viewport_win.addch(y, x, shade, curses.color_pair(WALL_COLOR))
+                            viewport_win.addch(y, x, shade, curses.color_pair(wall_color))
                         else:
-                            viewport_win.addch(y, x, shade, curses.color_pair(FLOOR_COLOR))
+                            viewport_win.addch(y, x, shade, curses.color_pair(floor_color))
                     except curses.error:
                         pass  # Skip invalid positions
     
     viewport_win.border()
     viewport_win.refresh()
 
-def draw_log(log_win, log_messages):
+def draw_log(log_win, log_messages, player_color, direction_color):
     """
-    Draw the log window.
+    Draw the log window with colored text.
     - log_win: The window where the log is drawn.
     - log_messages: A list of log messages to display.
+    - player_color: The color pair for "You".
+    - direction_color: The color pair for directions.
     """
     log_win.clear()
     log_win.border()
     
+    height, width = log_win.getmaxyx()
+    max_entries = height - 2  # Account for border
+    
     # Display the last few log messages
-    for i, message in enumerate(log_messages[-10:]):  # Show last 10 messages
+    for i, message in enumerate(log_messages[-max_entries:]):
         try:
-            log_win.addstr(i + 1, 1, message)
+            # Split the message into parts for coloring
+            if "You" in message:
+                parts = message.split(" ")
+                log_win.addstr(i + 1, 1, parts[0], curses.color_pair(player_color))  # "You" in blue
+                log_win.addstr(" " + parts[1], curses.color_pair(curses.COLOR_WHITE))  # "moved" or "turned" in white
+                log_win.addstr(" " + " ".join(parts[2:]), curses.color_pair(direction_color))  # Direction in yellow
+            else:
+                log_win.addstr(i + 1, 1, message)
         except curses.error:
             pass  # Skip invalid positions
     
@@ -193,40 +305,28 @@ def draw_title(title_win):
     title_win.refresh()
 
 def main(stdscr):
+    # Enable fullscreen mode
+    curses.resize_term(curses.LINES, curses.COLS)
+    stdscr.clear()
+    stdscr.refresh()
+    
+    # Initialize colors
     curses.curs_set(0)
     curses.start_color()
     curses.init_pair(WALL_COLOR, curses.COLOR_BLACK, curses.COLOR_YELLOW)  # Wall color
     curses.init_pair(FLOOR_COLOR, curses.COLOR_BLACK, curses.COLOR_WHITE)  # Floor color
     curses.init_pair(TITLE_COLOR, curses.COLOR_RED, curses.COLOR_BLACK)    # Blood red title
+    curses.init_pair(LOG_PLAYER_COLOR, curses.COLOR_BLUE, curses.COLOR_BLACK)  # Blue for "You"
+    curses.init_pair(LOG_DIRECTION_COLOR, curses.COLOR_YELLOW, curses.COLOR_BLACK)  # Yellow for directions
     
-    # Game setup
-    game_map = [
-        "###############",
-        "#.............#",
-        "#.####........#",
-        "#.#..#........#",
-        "#.#..#........#",
-        "#.####........#",
-        "#.............#",
-        "##########....#",
-        "#........#....#",
-        "#........#....#",
-        "#........#....#",
-        "#........#....#",
-        "#........#....#",
-        "#.............#",
-        "#.............#",
-        "#........#....#",
-        "#........#....#",
-        "#........#....#",
-        "#........#....#",
-        "##########....#",
-        "#.............#",
-        "#.............#",
-        "#.............#",
-        "#.............#",
-        "###############"
-    ]
+    # Load the first map
+    map_index = 1
+    map_data = load_next_map(map_index)
+    game_map = map_data["layout"]
+    wall_color = WALL_COLOR
+    floor_color = FLOOR_COLOR
+    
+    # Player setup
     player_pos = [1.5, 1.5]  # Start position (centered in the hallway)
     player_dir = [1, 0]       # Facing east
     camera_plane = [0, CAMERA_LENGTH]
@@ -264,9 +364,9 @@ def main(stdscr):
         camera_y = int(player_pos[1])
         camera_x = int(player_pos[0])
         
-        draw_2d_map(map_win, game_map, player_pos, player_dir, camera_y, camera_x)
-        draw_3d_viewport(viewport, player_pos, player_dir, camera_plane, game_map)
-        draw_log(log_win, log_messages)
+        draw_2d_map(map_win, game_map, player_pos, player_dir, camera_y, camera_x, wall_color, floor_color)
+        draw_3d_viewport(viewport, player_pos, player_dir, camera_plane, game_map, wall_color, floor_color)
+        draw_log(log_win, log_messages, LOG_PLAYER_COLOR, LOG_DIRECTION_COLOR)
         draw_title(title_win)
         
         key = stdscr.getch()
