@@ -282,7 +282,7 @@ def draw_log(log_win, log_messages, player_color, direction_color):
             if "You" in message:
                 parts = message.split(" ")
                 log_win.addstr(i + 1, 1, parts[0], curses.color_pair(player_color))  # "You" in blue
-                log_win.addstr(" " + parts[1], curses.color_pair(curses.COLOR_WHITE))  # "moved" or "turned" in white
+                log_win.addstr(" " + parts[1], curses.color_pair(6))  # "moved" or "turned" in white
                 log_win.addstr(" " + " ".join(parts[2:]), curses.color_pair(direction_color))  # Direction in yellow
             else:
                 log_win.addstr(i + 1, 1, message)
@@ -310,14 +310,22 @@ def main(stdscr):
     stdscr.clear()
     stdscr.refresh()
     
+    # Check if the terminal supports colors
+    if not curses.has_colors():
+        raise RuntimeError("Your terminal does not support colors.")
+    
     # Initialize colors
     curses.curs_set(0)
     curses.start_color()
+    curses.use_default_colors()  # Use default terminal colors for better compatibility
+    
+    # Define color pairs
     curses.init_pair(WALL_COLOR, curses.COLOR_BLACK, curses.COLOR_YELLOW)  # Wall color
     curses.init_pair(FLOOR_COLOR, curses.COLOR_BLACK, curses.COLOR_WHITE)  # Floor color
     curses.init_pair(TITLE_COLOR, curses.COLOR_RED, curses.COLOR_BLACK)    # Blood red title
     curses.init_pair(LOG_PLAYER_COLOR, curses.COLOR_BLUE, curses.COLOR_BLACK)  # Blue for "You"
     curses.init_pair(LOG_DIRECTION_COLOR, curses.COLOR_YELLOW, curses.COLOR_BLACK)  # Yellow for directions
+    curses.init_pair(6, curses.COLOR_WHITE, curses.COLOR_BLACK)  # White for "moved" or "turned"
     
     # Load the first map
     map_index = 1
