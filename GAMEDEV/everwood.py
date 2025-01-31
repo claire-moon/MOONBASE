@@ -197,18 +197,30 @@ def draw_3d_viewport(viewport_win, player_pos, player_dir, camera_plane, game_ma
     height, width = viewport_win.getmaxyx()
     viewport_win.clear()
     
-    # Fill the ceiling and floor
+    # Fill the ceiling and floor with gradient shading
     for y in range(1, height // 2):  # Ceiling
         for x in range(1, width - 1):
+            # Calculate the distance for the ceiling
+            dist = (height // 2 - y) / (height // 2)
+            shade_level = min(int(dist * MAX_SHADE), MAX_SHADE)
+            # Use the default ceiling color (gray) and apply the gradient shading
+            color_pair = CEILING_COLOR  # Default ceiling color
             try:
-                viewport_win.addch(y, x, ' ', curses.color_pair(CEILING_COLOR))
+                # Apply the gradient shading by blending with the base color
+                viewport_win.addch(y, x, ' ', curses.color_pair(color_pair) | curses.A_DIM if shade_level > 0 else curses.color_pair(color_pair))
             except curses.error:
                 pass  # Skip invalid positions
     
     for y in range(height // 2, height - 1):  # Floor
         for x in range(1, width - 1):
+            # Calculate the distance for the floor
+            dist = (y - height // 2) / (height // 2)
+            shade_level = min(int(dist * MAX_SHADE), MAX_SHADE)
+            # Use the default floor color (gray) and apply the gradient shading
+            color_pair = FLOOR_COLOR_3D  # Default floor color
             try:
-                viewport_win.addch(y, x, ' ', curses.color_pair(FLOOR_COLOR_3D))
+                # Apply the gradient shading by blending with the base color
+                viewport_win.addch(y, x, ' ', curses.color_pair(color_pair) | curses.A_DIM if shade_level > 0 else curses.color_pair(color_pair))
             except curses.error:
                 pass  # Skip invalid positions
     
