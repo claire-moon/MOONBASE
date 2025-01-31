@@ -10,10 +10,6 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 MAP_FILE = os.path.join(SCRIPT_DIR, "MAP01.txt")  # Updated to MAP01.txt
 GAMEDATA_FILE = os.path.join(SCRIPT_DIR, "GAMEDATA.ini")
 
-# Debug: Print the file paths
-print("Map file path:", MAP_FILE)
-print("GAMEDATA file path:", GAMEDATA_FILE)
-
 # Tile definitions
 FLOOR = '.'
 WALL = '#'
@@ -27,7 +23,7 @@ PLAYER_ICONS = {
 }
 
 # Shades for distance (darker means farther)
-SHADES = " .:-=+*#%@"
+SHADES = " .:-=+*#%@" 
 MAX_SHADE = len(SHADES) - 1
 
 # FOV settings
@@ -108,15 +104,10 @@ def load_map(map_file):
             "###############"
         ]
     
-    # Debug: Print the loaded layout
-    print("Loaded layout:")
-    for line in layout:
-        print(line)
-    
     map_data = {
         "layout": layout,
         "wall_color": "BROWN",  # Default wall color
-        "floor_color": "GRAY",   # Default floor color
+        "floor_color": "GRAY",   # Default floor color,
     }
     return map_data
 
@@ -338,6 +329,117 @@ def draw_title(title_win):
             pass  # Skip invalid positions
     title_win.refresh()
 
+def draw_title_screen(stdscr):
+    """
+    Draw the title screen and handle user input.
+    - stdscr: The standard screen object from curses.
+    Returns: The selected option (1-6).
+    """
+    stdscr.clear()
+    h, w = stdscr.getmaxyx()
+    
+    # Display the title
+    for i, line in enumerate(ASCII_TITLE):
+        x = w//2 - len(line)//2
+        y = h//2 - len(ASCII_TITLE)//2 + i
+        stdscr.addstr(y, x, line, curses.color_pair(TITLE_COLOR))
+    
+    # Display the menu options
+    options = [
+        "1. NEW GAME (CREATE CHARACTER)",
+        "2. NEW GAME (DEFAULT CHARACTER)",
+        "3. NEW GAME (DEBUG MODE)",
+        "4. LOAD GAME",
+        "5. OPTIONS",
+        "6. EXIT"
+    ]
+    
+    for i, option in enumerate(options):
+        x = w//2 - len(option)//2
+        y = h//2 + len(ASCII_TITLE)//2 + i + 2
+        stdscr.addstr(y, x, option)
+    
+    stdscr.refresh()
+    
+    # Wait for user input
+    while True:
+        key = stdscr.getch()
+        if key in [ord('1'), ord('2'), ord('3'), ord('4'), ord('5'), ord('6')]:
+            return key - ord('0')  # Convert ASCII to integer
+
+def draw_chargen_screen(stdscr):
+    """
+    Draw the character creation screen.
+    - stdscr: The standard screen object from curses.
+    """
+    stdscr.clear()  # Clear the screen before rendering the character creation screen
+    h, w = stdscr.getmaxyx()
+    
+    # Display the character creation message
+    message = "CHARACTER CREATION SCREEN"
+    x = w//2 - len(message)//2
+    y = h//2
+    stdscr.addstr(y, x, message)
+    
+    stdscr.refresh()
+    stdscr.getch()  # Wait for any key press to return
+
+def draw_options_screen(stdscr, gamedata):
+    """
+    Draw the options screen and handle user input.
+    - stdscr: The standard screen object from curses.
+    - gamedata: The game data dictionary.
+    """
+    stdscr.clear()  # Clear the screen before rendering the options screen
+    h, w = stdscr.getmaxyx()
+    
+    # Display the options
+    options = [
+        "1. Change Player Color",
+        "2. Change Direction Color",
+        "3. Change Wall Color",
+        "4. Change Floor Color",
+        "5. Back to Title Screen"
+    ]
+    
+    for i, option in enumerate(options):
+        x = w//2 - len(option)//2
+        y = h//2 - len(options)//2 + i
+        stdscr.addstr(y, x, option)
+    
+    stdscr.refresh()
+    
+    # Wait for user input
+    while True:
+        key = stdscr.getch()
+        if key == ord('1'):
+            gamedata["player_color"] = "BLUE"  # Example: Change player color to blue
+        elif key == ord('2'):
+            gamedata["direction_color"] = "YELLOW"  # Example: Change direction color to yellow
+        elif key == ord('3'):
+            gamedata["wall_color"] = "BROWN"  # Example: Change wall color to brown
+        elif key == ord('4'):
+            gamedata["floor_color"] = "GRAY"  # Example: Change floor color to gray
+        elif key == ord('5'):
+            break  # Return to title screen
+
+def draw_load_game_screen(stdscr):
+    """
+    Draw the load game screen.
+    - stdscr: The standard screen object from curses.
+    """
+    stdscr.clear()  # Clear the screen before rendering the load game screen
+    h, w = stdscr.getmaxyx()
+    
+    # Display the load game message
+    message = "LOAD GAME SCREEN (SAVE FILES LIST)"
+    x = w//2 - len(message)//2
+    y = h//2
+    stdscr.addstr(y, x, message)
+    
+    stdscr.refresh()
+    stdscr.getch()  # Wait for any key press to return
+
 def main(stdscr):
     # Enable fullscreen mode
     curses.resize_term(curses.LINES, curses.COLS)
@@ -372,88 +474,114 @@ def main(stdscr):
         intensity = int(255 * (1 - i / MAX_SHADE))
         curses.init_color(i + 10, intensity, intensity // 2, 0)  # Brown gradient
         curses.init_pair(SHADE_COLORS + i, i + 10, i + 10)
-            # Load the first map
-    map_index = 1
-    map_data = load_next_map(map_index)
-    game_map = map_data["layout"]
-    wall_color = WALL_COLOR
-    floor_color = FLOOR_COLOR
     
-    # Player setup
-    player_pos = [1.5, 1.5]  # Start position (centered in the hallway)
-    player_dir = [1, 0]       # Facing east
-    camera_plane = [0, CAMERA_LENGTH]
-    
-    # Log messages
-    log_messages = []
-    
-    # Window setup
-    h, w = stdscr.getmaxyx()
-    
-    # Define viewport size (4:3 aspect ratio)
-    viewport_height = min(h // 2, 20)  # Fixed height for 2D map
-    viewport_width = min(w // 2, 30)   # Fixed width for 2D map
-    
-    # Ensure the viewport fits within the terminal
-    if viewport_height <= 0 or viewport_width <= 0:
-        raise ValueError("Terminal too small to create viewport.")
-    
-    # Position viewport in the top-left quadrant
-    viewport = curses.newwin(viewport_height, viewport_width, 1, 1)
-    
-    # Position 2D map below the viewport
-    map_win = curses.newwin(viewport_height, viewport_width, viewport_height + 2, 1)
-    
-    # Position log window to the right of the viewport (same height as viewport + map)
-    log_win_height = viewport_height * 2 + 1  # Height of viewport + map + border
-    log_win = curses.newwin(log_win_height, w - viewport_width - 2, 1, viewport_width + 2)
-    
-    # Position title window at the bottom
-    title_win = curses.newwin(len(ASCII_TITLE), w, h - len(ASCII_TITLE), 0)
-    
-    # Main loop
+    # Title screen loop
+    game_in_play = False  # Flag to track if the game is running
     while True:
-        # Calculate camera offsets to center the player
-        camera_y = int(player_pos[1])
-        camera_x = int(player_pos[0])
+        if not game_in_play:
+            option = draw_title_screen(stdscr)
         
-        draw_2d_map(map_win, game_map, player_pos, player_dir, camera_y, camera_x, wall_color, floor_color)
-        draw_3d_viewport(viewport, player_pos, player_dir, camera_plane, game_map, wall_color, floor_color)
-        draw_log(log_win, log_messages, LOG_PLAYER_COLOR, LOG_DIRECTION_COLOR)
-        draw_title(title_win)
+        if option == 1:
+            draw_chargen_screen(stdscr)
+        elif option == 2:
+            # Start the game with default character
+            game_in_play = True  # Set the game state to "in play"
+            stdscr.clear()  # Clear the title screen
+            stdscr.refresh()  # Refresh to apply the clear
+            
+            map_index = 1
+            map_data = load_next_map(map_index)
+            game_map = map_data["layout"]
+            wall_color = WALL_COLOR
+            floor_color = FLOOR_COLOR
+            
+            # Player setup
+            player_pos = [1.5, 1.5]  # Start position (centered in the hallway)
+            player_dir = [1, 0]       # Facing east
+            camera_plane = [0, CAMERA_LENGTH]
+            
+            # Log messages
+            log_messages = []
+            
+            # Window setup
+            h, w = stdscr.getmaxyx()
+            
+            # Define viewport size (4:3 aspect ratio)
+            viewport_height = min(h // 2, 20)  # Fixed height for 2D map
+            viewport_width = min(w // 2, 30)   # Fixed width for 2D map
+            
+            # Ensure the viewport fits within the terminal
+            if viewport_height <= 0 or viewport_width <= 0:
+                raise ValueError("Terminal too small to create viewport.")
+            
+            # Position viewport in the top-left quadrant
+            viewport = curses.newwin(viewport_height, viewport_width, 1, 1)
+            
+            # Position 2D map below the viewport
+            map_win = curses.newwin(viewport_height, viewport_width, viewport_height + 2, 1)
+            
+            # Position log window to the right of the viewport (same height as viewport + map)
+            log_win_height = viewport_height * 2 + 1  # Height of viewport + map + border
+            log_win = curses.newwin(log_win_height, w - viewport_width - 2, 1, viewport_width + 2)
+            
+            # Position title window at the bottom
+            title_win = curses.newwin(len(ASCII_TITLE), w, h - len(ASCII_TITLE), 0)
+            
+            # Main game loop
+            while game_in_play:
+                # Calculate camera offsets to center the player
+                camera_y = int(player_pos[1])
+                camera_x = int(player_pos[0])
+                
+                draw_2d_map(map_win, game_map, player_pos, player_dir, camera_y, camera_x, wall_color, floor_color)
+                draw_3d_viewport(viewport, player_pos, player_dir, camera_plane, game_map, wall_color, floor_color)
+                draw_log(log_win, log_messages, LOG_PLAYER_COLOR, LOG_DIRECTION_COLOR)
+                draw_title(title_win)
+                
+                key = stdscr.getch()
+                
+                if key == ord('q'):
+                    game_in_play = False  # Exit the game loop and return to the title screen
+                    stdscr.clear()  # Clear the game screen
+                    stdscr.refresh()  # Refresh to apply the clear
+                    break
+                elif key == curses.KEY_UP:
+                    new_x = player_pos[0] + player_dir[0]
+                    new_y = player_pos[1] + player_dir[1]
+                    if game_map[int(new_y)][int(new_x)] == FLOOR:
+                        player_pos[0] = new_x
+                        player_pos[1] = new_y
+                        log_messages.append("You moved forward.")
+                elif key == curses.KEY_DOWN:
+                    new_x = player_pos[0] - player_dir[0]
+                    new_y = player_pos[1] - player_dir[1]
+                    if game_map[int(new_y)][int(new_x)] == FLOOR:
+                        player_pos[0] = new_x
+                        player_pos[1] = new_y
+                        log_messages.append("You moved backward.")
+                elif key == curses.KEY_LEFT:
+                    # Rotate direction and camera plane CCW
+                    new_dir = (-player_dir[1], player_dir[0])
+                    new_plane = (-camera_plane[1], camera_plane[0])
+                    player_dir = list(new_dir)
+                    camera_plane = list(new_plane)
+                    log_messages.append("You turned left.")
+                elif key == curses.KEY_RIGHT:
+                    # Rotate direction and camera plane CW
+                    new_dir = (player_dir[1], -player_dir[0])
+                    new_plane = (camera_plane[1], -camera_plane[0])
+                    player_dir = list(new_dir)
+                    camera_plane = list(new_plane)
+                    log_messages.append("You turned right.")
+        elif option == 3:
+            # Debug mode (same as option 2 but with debug features)
+            pass
+        elif option == 4:
+            draw_load_game_screen(stdscr)
+        elif option == 5:
+            draw_options_screen(stdscr, gamedata)
+        elif option == 6:
+            break  # Exit the game
         
-        key = stdscr.getch()
-        
-        if key == ord('q'):
-            break
-        elif key == curses.KEY_UP:
-            new_x = player_pos[0] + player_dir[0]
-            new_y = player_pos[1] + player_dir[1]
-            if game_map[int(new_y)][int(new_x)] == FLOOR:
-                player_pos[0] = new_x
-                player_pos[1] = new_y
-                log_messages.append("You moved forward.")
-        elif key == curses.KEY_DOWN:
-            new_x = player_pos[0] - player_dir[0]
-            new_y = player_pos[1] - player_dir[1]
-            if game_map[int(new_y)][int(new_x)] == FLOOR:
-                player_pos[0] = new_x
-                player_pos[1] = new_y
-                log_messages.append("You moved backward.")
-        elif key == curses.KEY_LEFT:
-            # Rotate direction and camera plane CCW
-            new_dir = (-player_dir[1], player_dir[0])
-            new_plane = (-camera_plane[1], camera_plane[0])
-            player_dir = list(new_dir)
-            camera_plane = list(new_plane)
-            log_messages.append("You turned left.")
-        elif key == curses.KEY_RIGHT:
-            # Rotate direction and camera plane CW
-            new_dir = (player_dir[1], -player_dir[0])
-            new_plane = (camera_plane[1], -camera_plane[0])
-            player_dir = list(new_dir)
-            camera_plane = list(new_plane)
-            log_messages.append("You turned right.")
-
 if __name__ == "__main__":
     curses.wrapper(main)
