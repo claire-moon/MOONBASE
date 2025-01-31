@@ -43,6 +43,9 @@ LOG_DIRECTION_COLOR = 5  # Yellow for directions
 CEILING_COLOR = 7  # Gray for ceiling
 FLOOR_COLOR_3D = 8  # Gray for floor
 
+# Gradient color pairs for shading
+SHADE_COLORS = 10  # Starting color pair for shades
+
 # ASCII title
 ASCII_TITLE = [
     "▓█████ ██▒   █▓▓█████  ██▀███   █     █░ ▒█████   ▒█████  ▓█████▄ ",
@@ -112,7 +115,7 @@ def load_map(map_file):
     
     map_data = {
         "layout": layout,
-        "wall_color": "YELLOW",  # Default wall color
+        "wall_color": "BROWN",  # Default wall color
         "floor_color": "GRAY",   # Default floor color
     }
     return map_data
@@ -128,7 +131,7 @@ def load_gamedata():
     gamedata = {
         "player_color": config.get("COLORS", "player_color", fallback="BLUE"),
         "direction_color": config.get("COLORS", "direction_color", fallback="YELLOW"),
-        "wall_color": config.get("COLORS", "wall_color", fallback="YELLOW"),
+        "wall_color": config.get("COLORS", "wall_color", fallback="BROWN"),
         "floor_color": config.get("COLORS", "floor_color", fallback="GRAY"),
         "max_log_entries": config.getint("LOG", "max_log_entries", fallback=10),
     }
@@ -265,13 +268,15 @@ def draw_3d_viewport(viewport_win, player_pos, player_dir, camera_plane, game_ma
             end = min(height-1, height//2 + line_height//2)
             shade = SHADES[min(int(dist), MAX_SHADE)]
             
+            # Determine the color based on the shade level
+            shade_level = min(int(dist), MAX_SHADE)
+            color_pair = SHADE_COLORS + shade_level
+            
             for y in range(start, end):
                 if 0 <= y < height-1 and 0 <= x < width-1:
                     try:
-                        if game_map[map_y][map_x] == WALL:
-                            viewport_win.addch(y, x, shade, curses.color_pair(wall_color))
-                        else:
-                            viewport_win.addch(y, x, shade, curses.color_pair(floor_color))
+                        # Set the background color to the shade level
+                        viewport_win.addch(y, x, shade, curses.color_pair(color_pair))
                     except curses.error:
                         pass  # Skip invalid positions
     
@@ -349,7 +354,13 @@ def main(stdscr):
     curses.init_pair(CEILING_COLOR, curses.COLOR_BLACK, curses.COLOR_WHITE)  # Ceiling color (gray)
     curses.init_pair(FLOOR_COLOR_3D, curses.COLOR_BLACK, curses.COLOR_WHITE)  # Floor color (gray)
     
-    # Load the first map
+    # Initialize gradient color pairs for shading (brown gradient)
+    for i in range(MAX_SHADE + 1):
+        # Create a gradient from light brown to black
+        intensity = int(255 * (1 - i / MAX_SHADE))
+        curses.init_color(i + 10, intensity, intensity // 2, 0)  # Brown gradient
+        curses.init_pair(SHADE_COLORS + i, i + 10, i + 10)
+            # Load the first map
     map_index = 1
     map_data = load_next_map(map_index)
     game_map = map_data["layout"]
