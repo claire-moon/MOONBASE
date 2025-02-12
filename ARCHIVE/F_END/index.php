@@ -49,74 +49,74 @@ echo "<!DOCTYPE html>
     <meta name='viewport' content='width=device-width, initial-scale=1.0'>
     <title>MOONBASE</title>
     <style>
-    body {
-        font-family: "Courier New", Courier, monospace;
-        margin: 20px;
-        background-color: black;
-        color: white;
-    }
-    h1 {
-        color: white;
-        font-size: 3em;
-        text-align: center;
-    }
-    .stats {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        background-color: black;
-        padding: 20px;
-        width: 250px;
-        z-index: 1000;
-    }
-    .stats h2 {
-        margin-top: 0;
-    }
-    .progress-bar {
-        background-color: gray;
-        border-radius: 5px;
-        overflow: hidden;
-        margin: 10px 0;
-    }
-    .progress-bar div {
-        background-color: white;
-        height: 10px;
-    }
-    .file-list {
-        background-color: black;
-        padding: 20px;
-        margin-bottom: 20px;
-    }
-    .file-list a {
-        display: block;
-        padding: 10px;
-        color: white;
-        text-decoration: none;
-    }
-    .file-list a:hover {
-        background-color: gray;
-    }
-    .upload-form {
-        background-color: black;
-        padding: 20px;
-    }
-    .upload-form input[type='file'] {
-        display: none;
-    }
-    .upload-form label {
-        color: white;
-        text-decoration: underline;
-        cursor: pointer;
-    }
-    .upload-form input[type='submit'] {
-        display: none;
-    }
-    .upload-form .upload-link {
-        color: white;
-        text-decoration: underline;
-        cursor: pointer;
-    }
-        </style>
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            margin: 20px;
+            background-color: black;
+            color: white;
+        }
+        h1 {
+            color: white;
+            font-size: 3em;
+            text-align: center;
+        }
+        .stats {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: black;
+            padding: 20px;
+            width: 250px;
+            z-index: 1000;
+        }
+        .stats h2 {
+            margin-top: 0;
+        }
+        .progress-bar {
+            background-color: gray;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-bar div {
+            background-color: white;
+            height: 10px;
+        }
+        .file-list {
+            background-color: black;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .file-list a {
+            display: block;
+            padding: 10px;
+            color: white;
+            text-decoration: none;
+        }
+        .file-list a:hover {
+            background-color: gray;
+        }
+        .upload-form {
+            background-color: black;
+            padding: 20px;
+        }
+        .upload-form input[type='file'] {
+            display: none;
+        }
+        .upload-form label {
+            color: white;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        .upload-form input[type='submit'] {
+            display: none;
+        }
+        .upload-form .upload-link {
+            color: white;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
     <div class='stats'>
@@ -160,7 +160,7 @@ echo "</div>
         <form action='' method='post' enctype='multipart/form-data'>
             <label for='fileToUpload'>Choose File</label>
             <input type='file' name='fileToUpload' id='fileToUpload'>
-            <span class='upload-link' onclick="document.querySelector('input[type=submit]').click();">Upload File</span>
+            <span class='upload-link' onclick=\"document.querySelector('input[type=submit]').click();\">Upload File</span>
             <input type='submit' value='Upload File' name='submit'>
         </form>
     </div>";
