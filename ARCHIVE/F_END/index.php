@@ -23,6 +23,24 @@ $totalSpace = disk_total_space('/');
 $freeSpace = disk_free_space('/');
 $usedSpace = $totalSpace - $freeSpace;
 
+// Handle file download
+if (isset($_GET['file'])) {
+    $filePath = $_GET['file'];
+    if (file_exists($filePath)) {
+        header('Content-Description: File Transfer');
+        header('Content-Type: ' . mime_content_type($filePath));
+        header('Content-Disposition: attachment; filename="' . basename($filePath) . '"');
+        header('Expires: 0');
+        header('Cache-Control: must-revalidate');
+        header('Pragma: public');
+        header('Content-Length: ' . filesize($filePath));
+        readfile($filePath);
+        exit;
+    } else {
+        echo "<p>File not found.</p>";
+    }
+}
+
 // HTML start
 echo "<!DOCTYPE html>
 <html lang='en'>
@@ -40,14 +58,15 @@ echo "<!DOCTYPE html>
             color: #333;
         }
         .stats {
-            position: absolute;
-            top: 20px;
+            position: fixed;
+            bottom: 20px;
             right: 20px;
             background-color: white;
             padding: 20px;
             border: 1px solid #ccc;
             border-radius: 5px;
             width: 250px;
+            z-index: 1000;
         }
         .stats h2 {
             margin-top: 0;
@@ -145,24 +164,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['fileToUpload'])) {
         echo "<p>It worked! Upload successful.</p>";
     } else {
         echo "<p>The upload fucked up. Try again.</p>";
-    }
-}
-
-// Handle file download
-if (isset($_GET['file'])) {
-    $filePath = $_GET['file'];
-    if (file_exists($filePath)) {
-        header('Content-Description: File Transfer');
-        header('Content-Type: application/octet-stream');
-        header('Content-Disposition: attachment; filename="' . basename($filePath) . '"');
-        header('Expires: 0');
-        header('Cache-Control: must-revalidate');
-        header('Pragma: public');
-        header('Content-Length: ' . filesize($filePath));
-        readfile($filePath);
-        exit;
-    } else {
-        echo "<p>File not found.</p>";
     }
 }
 
