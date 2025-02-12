@@ -1,15 +1,15 @@
 <?php
-// formatting le byterinos into le human readable (ignore me)
+// Function to format bytes into a human-readable format
 function formatBytes($bytes, $precision = 2) {
     $units = ['B', 'KB', 'MB', 'GB', 'TB'];
     $bytes = max($bytes, 0);
-    $pow = floor(($bytes ? log($bytes) : 0) / log(1024);
+    $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
     $pow = min($pow, count($units) - 1);
     $bytes /= (1 << (10 * $pow));
     return round($bytes, $precision) . ' ' . $units[$pow];
 }
 
-// directory size fetcher
+// Function to get directory size
 function getDirectorySize($path) {
     $size = 0;
     foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path)) as $file) {
@@ -18,12 +18,12 @@ function getDirectorySize($path) {
     return $size;
 }
 
-// storage stats fetcher
+// Get storage stats
 $totalSpace = disk_total_space('/');
 $freeSpace = disk_free_space('/');
 $usedSpace = $totalSpace - $freeSpace;
 
-// html shit
+// HTML start
 echo "<!DOCTYPE html>
 <html lang='en'>
 <head>
@@ -102,7 +102,7 @@ echo "<!DOCTYPE html>
     <div class='file-list'>
         <h2>FILES</h2>";
 
-// files listing function
+// Function to list files in the directory
 function listFiles($dir) {
     $files = scandir($dir);
     foreach ($files as $file) {
@@ -117,7 +117,7 @@ function listFiles($dir) {
     }
 }
 
-// directory navigation handler
+// Handle directory navigation
 $currentDir = isset($_GET['dir']) ? $_GET['dir'] : 'uploads';
 if (!is_dir($currentDir)) {
     $currentDir = 'uploads';
@@ -134,9 +134,12 @@ echo "</div>
         </form>
     </div>";
 
-// file upload handler
+// Handle file upload
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['fileToUpload'])) {
     $targetDir = $currentDir . '/';
+    if (!is_dir($targetDir)) {
+        mkdir($targetDir, 0755, true);
+    }
     $targetFile = $targetDir . basename($_FILES['fileToUpload']['name']);
     if (move_uploaded_file($_FILES['fileToUpload']['tmp_name'], $targetFile)) {
         echo "<p>It worked! Upload successful.</p>";
@@ -145,7 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['fileToUpload'])) {
     }
 }
 
-// file download handler
+// Handle file download
 if (isset($_GET['file'])) {
     $filePath = $_GET['file'];
     if (file_exists($filePath)) {
