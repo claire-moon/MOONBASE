@@ -43,9 +43,9 @@ echo "<!DOCTYPE html>
     </style>
 </head>
 <body>
-    <h1>File Server</h1>
+    <h1>MOONBASE FILESr</h1>
     <div class='file-list'>
-        <h2>Files</h2>";
+        <h2>FILES</h2>";
 
 // list files function
 function listFiles($dir) {
@@ -63,7 +63,7 @@ listFiles('.');
 
 echo "</div>
     <div class='upload-form'>
-        <h2>Upload File</h2>
+        <h2>UPLOAD THAT SHIT</h2>
         <form action='' method='post' enctype='multipart/form-data'>
             <input type='file' name='fileToUpload' id='fileToUpload'>
             <input type='submit' value='Upload File' name='submit'>
@@ -78,9 +78,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['fileToUpload'])) {
     }
     $targetFile = $targetDir . basename($_FILES['fileToUpload']['name']);
     if (move_uploaded_file($_FILES['fileToUpload']['tmp_name'], $targetFile)) {
-        echo "<p>File uploaded successfully.</p>";
+        echo "<p>It worked! Upload successful.</p>";
     } else {
-        echo "<p>Sorry, there was an error uploading your file.</p>";
+        echo "<p>The upload fucked up. Try again.</p>";
     }
 }
 
